@@ -7,3 +7,5 @@ pages_build_output_dir = "."
 # binding = "DB"
 # database_name = "prp-leads"
 # database_id = "YOUR_DATABASE_ID"
+[ai]
+binding = "AI"
