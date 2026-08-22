@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <title>Prueba Facial Reshape</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: #f6f2eb;
+      color: #1d3028;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-bottom: 24px;
+    }
+
+    .status {
+      padding: 14px;
+      background: #eaf4ee;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+
+    .viewer {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      border-radius: 22px;
+      background: #111;
+    }
+
+    video,
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    video {
+      visibility: hidden;
+    }
+
+    canvas {
+      z-index: 2;
+    }
+
+    .controls {
+      max-width: 600px;
+      margin-top: 24px;
+    }
+
+    .control {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+    }
+
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      margin-top: 12px;
+      background: #1d392f;
+      color: white;
+    }
+
+    #error {
+      color: #a12622;
+      margin-top: 15px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Facial Reshape Test</h1>
+<div class="subtitle">
+  Prueba aislada del motor de armonización
+</div>
+
+<div id="status" class="status">
+  Inicializando motor facial…
+</div>
+
+<div class="viewer">
+  <video id="cam" playsinline muted></video>
+  <canvas id="out"></canvas>
+</div>
+
+<div class="controls">
+
+  <div class="control">
+    <label>
+      Labios
+      <span id="lipValue">0%</span>
+    </label>
+    <input id="lip"
+           type="range"
+           min="0"
+           max="100"
+           value="0">
+  </div>
+
+  <div class="control">
+    <label>
+      Pómulos
+      <span id="cheekValue">0%</span>
+    </label>
+    <input id="cheeks"
+           type="range"
+           min="0"
+           max="100"
+           value="0">
+  </div>
+
+  <div class="control">
+    <label>
+      Nariz
+      <span id="noseValue">0%</span>
+    </label>
+    <input id="nose"
+           type="range"
+           min="0"
+           max="100"
+           value="0">
+  </div>
+
+  <div class="control">
+    <label>
+      Mandíbula
+      <span id="jawValue">0%</span>
+    </label>
+    <input id="jaw"
+           type="range"
+           min="0"
+           max="100"
+           value="0">
+  </div>
+
+  <div class="control">
+    <label>
+      Elevación de ceja
+      <span id="browValue">0%</span>
+    </label>
+    <input id="brow"
+           type="range"
+           min="0"
+           max="100"
+           value="0">
+  </div>
+
+  <button id="reset">
+    Restablecer rostro
+  </button>
+
+  <div id="error"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+
+<script type="module">
+
+const status = document.getElementById("status");
+const errorBox = document.getElementById("error");
+
+try {
+
+  const module = await import(
+    "https://esm.sh/open-makeup-sdk?bundle"
+  );
+
+  const { OpenMakeup } = module;
+
+  const mk = new OpenMakeup({
+    video: document.getElementById("cam"),
+    renderCanvas: document.getElementById("out"),
+
+    assetsBaseUrl:
+      "https://cdn.jsdelivr.net/npm/open-makeup-sdk/assets",
+
+    mediapipeBaseUrl:
+      "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619"
+  });
+
+  status.textContent =
+    "Permití acceso a la cámara para comenzar.";
+
+  await mk.init();
+
+  /*
+   * IMPORTANTÍSIMO:
+   * NO usamos maquillaje.
+   * Solamente usamos el motor MORPH.
+   */
+
+  mk.clearAll();
+
+  status.textContent =
+    "✓ Rostro detectado. Mové los controles.";
+
+  const controls = {
+    lip: {
+      target: "lipPlump",
+      display: "lipValue"
+    },
+
+    cheeks: {
+      target: "cheeks",
+      display: "cheekValue"
+    },
+
+    nose: {
+      target: "noseSlim",
+      display: "noseValue"
+    },
+
+    jaw: {
+      target: "jawAngle",
+      display: "jawValue"
+    },
+
+    brow: {
+      target: "browLift",
+      display: "browValue"
+    }
+  };
+
+  Object.entries(controls).forEach(
+    ([id, config]) => {
+
+      const slider =
+        document.getElementById(id);
+
+      slider.addEventListener(
+        "input",
+        () => {
+
+          const percent =
+            Number(slider.value);
+
+          const value =
+            percent / 100;
+
+          document.getElementById(
+            config.display
+          ).textContent =
+            percent + "%";
+
+          mk.setMorph(
+            config.target,
+            value
+          );
+        }
+      );
+    }
+  );
+
+  document
+    .getElementById("reset")
+    .addEventListener(
+      "click",
+      () => {
+
+        mk.resetMorph();
+
+        document
+          .querySelectorAll(
+            'input[type="range"]'
+          )
+          .forEach(slider => {
+            slider.value = 0;
+          });
+
+        [
+          "lipValue",
+          "cheekValue",
+          "noseValue",
+          "jawValue",
+          "browValue"
+        ].forEach(id => {
+          document.getElementById(id)
+            .textContent = "0%";
+        });
+      }
+    );
+
+} catch (err) {
+
+  console.error(err);
+
+  status.textContent =
+    "No se pudo iniciar el motor.";
+
+  errorBox.textContent =
+    err?.message || String(err);
+}
+
+</script>
+
+</body>
+</html>
