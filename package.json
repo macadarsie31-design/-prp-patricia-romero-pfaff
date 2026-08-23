@@ -1,0 +1,11 @@
+{
+  "name": "prp-patricia-romero-pfaff",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@huggingface/inference": "4.13.25"
+  }
+}
